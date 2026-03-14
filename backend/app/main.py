@@ -5,6 +5,9 @@ from app.config import settings
 from app.database import init_db
 from app.api.health import router as health_router
 from app.api.accounts import router as accounts_router
+from app.api.imports import router as imports_router
+from app.api.btc import router as btc_router
+from app.api.portfolio import router as portfolio_router
 
 app = FastAPI(
     title=settings.app_name,
@@ -22,6 +25,9 @@ app.add_middleware(
 
 app.include_router(health_router)
 app.include_router(accounts_router, prefix="/api")
+app.include_router(imports_router, prefix="/api")
+app.include_router(btc_router, prefix="/api")
+app.include_router(portfolio_router, prefix="/api")
 
 
 @app.on_event("startup")
