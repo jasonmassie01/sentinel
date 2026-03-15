@@ -63,7 +63,7 @@ This is not a budgeting app. It's a financial edge — a personal Bloomberg term
 - **Signal over noise.** Every screen answers "What should I do?" not just "What happened?"
 - **Tax alpha is real alpha.** A dollar saved in taxes is the highest-conviction return you'll ever get
 - **Email is the API.** Gmail is the richest underutilized data source in personal finance
-- **Local-first, privacy-default.** All data stays on your machine. No Plaid. No third-party aggregators
+- **Local-first, privacy-default.** All data stays on your machine. API keys connect directly — no third-party aggregators
 - **One brain, not five apps.** Every module feeds every other module
 
 ---
@@ -75,9 +75,11 @@ This is not a budgeting app. It's a financial edge — a personal Bloomberg term
 | Backend | Python 3.12 (FastAPI) |
 | Frontend | React 19 (Vite + TypeScript) |
 | Database | SQLite (local-first, single-user) |
-| Email Parsing | Local LLM via Ollama (Llama 3.1 8B) |
+| Bank/Brokerage | Plaid API (Link + transaction sync) |
+| Crypto | Coinbase API (v2, HMAC auth) |
 | BTC Price | CoinGecko API (public, no key) |
 | On-chain Data | Mempool.space / Blockstream.info API |
+| Email Parsing | Local LLM via Ollama (Llama 3.1 8B) |
 | Email | Gmail API (OAuth2, local tokens) |
 | Deployment | Docker Compose |
 
@@ -89,17 +91,51 @@ This is not a budgeting app. It's a financial edge — a personal Bloomberg term
 - [Docker](https://docs.docker.com/get-docker/) and Docker Compose
 - Git
 
-### Install & Run
+### 1. Clone & Configure
 
 ```bash
 git clone https://github.com/jasonmassie01/sentinel.git
 cd sentinel
+cp .env.example .env
+```
+
+Edit `.env` with your API keys (all optional — add what you have):
+
+```bash
+# Plaid — auto-import bank/brokerage/credit card accounts
+# Get keys at https://dashboard.plaid.com
+SENTINEL_PLAID_CLIENT_ID=your_client_id
+SENTINEL_PLAID_SECRET=your_secret
+SENTINEL_PLAID_ENV=sandbox   # sandbox, development, or production
+
+# Coinbase — auto-sync crypto holdings & transactions
+# Create API key at coinbase.com/settings/api
+# Permissions needed: wallet:accounts:read, wallet:transactions:read
+SENTINEL_COINBASE_API_KEY=your_key
+SENTINEL_COINBASE_API_SECRET=your_secret
+```
+
+### 2. Launch
+
+```bash
 docker compose up --build
 ```
 
-Open [http://localhost:5173](http://localhost:5173) in your browser.
+### 3. Open
 
-The backend API is available at [http://localhost:8000](http://localhost:8000) with interactive docs at [http://localhost:8000/docs](http://localhost:8000/docs).
+- **Dashboard:** [http://localhost:5173](http://localhost:5173)
+- **API docs:** [http://localhost:8001/docs](http://localhost:8001/docs)
+
+### What Happens Automatically
+
+Once running, everything syncs on its own:
+
+| Source | What | How |
+|--------|------|-----|
+| **Plaid** | Bank accounts, credit cards, brokerage holdings, transactions | Click "Link Account" on the dashboard, connect via Plaid Link. Auto-syncs every 4 hours. |
+| **Coinbase** | Crypto wallets, balances, BTC transactions | Set API keys in `.env`. Click "Sync Now" on dashboard or auto-syncs every 4 hours. |
+| **On-chain BTC** | Any BTC address balance | Enter address on dashboard. Auto-refreshes every 4 hours via Mempool.space. |
+| **BTC Price** | Live price + 24h change | CoinGecko, no key needed. Refreshes on every page load. |
 
 ### Without Docker
 
@@ -109,75 +145,15 @@ cd backend
 python -m venv venv
 source venv/bin/activate  # or venv\Scripts\activate on Windows
 pip install -r requirements.txt
-uvicorn app.main:app --reload
+uvicorn app.main:app --reload --port 8001
 ```
 
 **Frontend:**
 ```bash
 cd frontend
-npm install
+npm install --legacy-peer-deps
 npm run dev
 ```
-
----
-
-## Getting Started
-
-### 1. Create Accounts
-
-```bash
-# Fidelity brokerage
-curl -X POST http://localhost:8000/api/accounts \
-  -H "Content-Type: application/json" \
-  -d '{"name": "Fidelity Brokerage", "type": "brokerage", "institution": "fidelity"}'
-
-# Schwab brokerage
-curl -X POST http://localhost:8000/api/accounts \
-  -H "Content-Type: application/json" \
-  -d '{"name": "Schwab Brokerage", "type": "brokerage", "institution": "schwab"}'
-
-# Fidelity credit card
-curl -X POST http://localhost:8000/api/accounts \
-  -H "Content-Type: application/json" \
-  -d '{"name": "Fidelity Visa", "type": "credit_card", "institution": "fidelity"}'
-
-# Bank checking
-curl -X POST http://localhost:8000/api/accounts \
-  -H "Content-Type: application/json" \
-  -d '{"name": "Checking", "type": "checking", "institution": "bank"}'
-```
-
-### 2. Import CSVs
-
-```bash
-# Import Fidelity positions/transactions
-curl -X POST http://localhost:8000/api/accounts/1/import \
-  -F "file=@/path/to/fidelity_positions.csv"
-
-# Import credit card transactions
-curl -X POST http://localhost:8000/api/accounts/3/import \
-  -F "file=@/path/to/fidelity_card.csv"
-```
-
-### 3. Track On-chain BTC
-
-```bash
-curl -X POST "http://localhost:8000/api/btc/track-address?address=YOUR_BTC_ADDRESS"
-```
-
-### 4. Set Up Gmail (Optional)
-
-1. Create a Google Cloud project and enable the Gmail API
-2. Create OAuth2 credentials (Desktop application type)
-3. Configure:
-
-```bash
-curl -X POST http://localhost:8000/api/email/setup \
-  -H "Content-Type: application/json" \
-  -d '{"client_id": "YOUR_CLIENT_ID", "client_secret": "YOUR_SECRET"}'
-```
-
-4. Follow the auth URL and exchange the code
 
 ---
 
@@ -194,6 +170,23 @@ curl -X POST http://localhost:8000/api/email/setup \
 | GET | `/api/portfolio/net-worth` | Net worth across all accounts |
 | GET | `/api/portfolio/holdings` | All holdings |
 | GET | `/api/portfolio/transactions` | Transaction history |
+
+### Plaid
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/plaid/status` | Plaid config status + linked items |
+| POST | `/api/plaid/link-token` | Create Plaid Link token |
+| POST | `/api/plaid/exchange-token` | Exchange public token |
+| POST | `/api/plaid/sync` | Sync all Plaid data |
+
+### Coinbase
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/coinbase/status` | Coinbase config status |
+| GET | `/api/coinbase/accounts` | List Coinbase wallets |
+| POST | `/api/coinbase/sync` | Sync accounts, holdings, transactions |
 
 ### BTC
 
@@ -274,10 +267,12 @@ sentinel/
 │   │   ├── main.py              # FastAPI app, CORS, router registration
 │   │   ├── config.py            # Environment-driven settings
 │   │   ├── database.py          # SQLite with 13-table schema
-│   │   ├── api/                 # REST endpoints (8 routers, 38+ endpoints)
+│   │   ├── api/                 # REST endpoints (11 routers, 45+ endpoints)
 │   │   ├── services/            # Business logic engines
 │   │   │   ├── tax_engine.py    # Lot tracking, harvesting, brackets
 │   │   │   ├── btc_service.py   # Price feeds, on-chain lookups
+│   │   │   ├── coinbase_service.py  # Coinbase API sync
+│   │   │   ├── plaid_service.py # Plaid Link + transaction sync
 │   │   │   ├── net_worth_service.py
 │   │   │   ├── import_service.py
 │   │   │   ├── gmail_service.py
@@ -301,7 +296,6 @@ sentinel/
 
 ## Non-Goals
 
-- No Plaid or bank API connections — CSV import only, privacy first
 - No multi-user support — single-user, local-only
 - No mobile app — desktop browser at localhost
 - No DeFi/altcoin tracking — BTC only for crypto
