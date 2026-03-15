@@ -44,6 +44,7 @@ def _run_migrations(conn):
         ("accounts", "btc_address", "TEXT"),
         ("transactions", "plaid_transaction_id", "TEXT"),
         ("transactions", "coinbase_tx_id", "TEXT"),
+        ("subscriptions", "updated_at", "TEXT"),
     ]
     for table, column, col_type in migrations:
         existing = [r[1] for r in conn.execute(f"PRAGMA table_info({table})").fetchall()]
@@ -141,7 +142,8 @@ CREATE TABLE IF NOT EXISTS subscriptions (
     last_seen TEXT NOT NULL,
     status TEXT NOT NULL DEFAULT 'active' CHECK(status IN ('active', 'cancelled', 'price_increased')),
     annual_cost REAL,
-    created_at TEXT DEFAULT (datetime('now'))
+    created_at TEXT DEFAULT (datetime('now')),
+    updated_at TEXT DEFAULT (datetime('now'))
 );
 
 CREATE TABLE IF NOT EXISTS email_receipts (

@@ -82,19 +82,17 @@ def import_csv(account_id: int, content: str) -> dict:
                     (tx.description, tx.total_amount, tx.date, tx.category),
                 )
 
-        # Ingest holdings (upsert — replace if same account+asset)
+        # Ingest holdings (delete+insert for same account+asset)
         holdings_upserted = 0
         for h in result.holdings:
             conn.execute(
+                "DELETE FROM holdings WHERE account_id = ? AND asset = ?",
+                (account_id, h.asset),
+            )
+            conn.execute(
                 """INSERT INTO holdings (account_id, asset, quantity, current_value,
                    cost_basis_total, unrealized_gain_loss)
-                   VALUES (?, ?, ?, ?, ?, ?)
-                   ON CONFLICT(id) DO UPDATE SET
-                   quantity=excluded.quantity,
-                   current_value=excluded.current_value,
-                   cost_basis_total=excluded.cost_basis_total,
-                   unrealized_gain_loss=excluded.unrealized_gain_loss,
-                   updated_at=datetime('now')""",
+                   VALUES (?, ?, ?, ?, ?, ?)""",
                 (
                     account_id,
                     h.asset,

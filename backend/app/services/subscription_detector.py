@@ -60,7 +60,9 @@ def detect_subscriptions(min_occurrences: int = 3) -> list[DetectedSubscription]
 
         # Check if amounts are consistent (within 20% tolerance for same-merchant)
         avg_amount = sum(amounts) / len(amounts)
-        consistent = all(abs(a - avg_amount) / avg_amount < 0.20 for a in amounts if avg_amount > 0)
+        if avg_amount == 0:
+            continue
+        consistent = all(abs(a - avg_amount) / avg_amount < 0.20 for a in amounts)
         if not consistent:
             continue
 

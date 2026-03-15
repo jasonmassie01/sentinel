@@ -6,7 +6,7 @@ router = APIRouter(tags=["imports"])
 
 @router.post("/accounts/{account_id}/import")
 async def upload_csv(account_id: int, file: UploadFile = File(...)):
-    if not file.filename or not file.filename.lower().endswith((".csv", ".ofx")):
+    if not file.filename or not file.filename.lower().endswith(".csv"):
         raise HTTPException(status_code=400, detail="Only CSV files are supported")
 
     content = await file.read()

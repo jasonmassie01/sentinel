@@ -19,6 +19,9 @@ class Settings(BaseSettings):
     coinbase_api_key: str = ""
     coinbase_api_secret: str = ""
 
+    # Ollama (for receipt parsing LLM)
+    ollama_host: str = "ollama"  # Docker service name; use "localhost" for local dev
+
     model_config = {"env_prefix": "SENTINEL_"}
 
 

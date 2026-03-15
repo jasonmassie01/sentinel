@@ -62,15 +62,17 @@ def compute_net_worth(btc_price: Optional[float] = None) -> NetWorthSnapshot:
 
             for h in holdings:
                 value = h["current_value"] or 0.0
+                cost = h["cost_basis_total"] or 0.0
 
                 # If this is a BTC holding and we have a live price, revalue
                 if h["asset"] and h["asset"].upper() in ("BTC", "BITCOIN") and btc_price:
                     value = (h["quantity"] or 0) * btc_price
 
                 acct_value += value
-                if h["cost_basis_total"]:
-                    acct_cost += h["cost_basis_total"]
-                if h["unrealized_gain_loss"]:
+                if cost:
+                    acct_cost += cost
+                    acct_gain += value - cost
+                elif h["unrealized_gain_loss"]:
                     acct_gain += h["unrealized_gain_loss"]
 
                 # Classify asset

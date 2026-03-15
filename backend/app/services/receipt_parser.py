@@ -138,7 +138,7 @@ async def parse_with_ollama(
     Parse receipt using local LLM via Ollama.
     Falls back gracefully if Ollama is not running.
     """
-    ollama_url = f"http://ollama:11434/api/generate"
+    ollama_url = f"http://{settings.ollama_host}:11434/api/generate"
 
     prompt = f"""Extract structured receipt data from this email. Return ONLY valid JSON, no other text.
 

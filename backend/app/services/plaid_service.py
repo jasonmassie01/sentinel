@@ -7,24 +7,26 @@ import json
 from datetime import date, timedelta
 from typing import Optional
 
-import plaid
-from plaid.api import plaid_api
-from plaid.model.link_token_create_request import LinkTokenCreateRequest
-from plaid.model.link_token_create_request_user import LinkTokenCreateRequestUser
-from plaid.model.item_public_token_exchange_request import ItemPublicTokenExchangeRequest
-from plaid.model.transactions_sync_request import TransactionsSyncRequest
-from plaid.model.investments_holdings_get_request import InvestmentsHoldingsGetRequest
-from plaid.model.investments_transactions_get_request import InvestmentsTransactionsGetRequest
-from plaid.model.accounts_balance_get_request import AccountsBalanceGetRequest
-from plaid.model.products import Products
-from plaid.model.country_code import CountryCode
-
 from app.config import settings
 from app.database import get_db
 
+# Lazy-load plaid to avoid crash when plaid-python isn't needed
+plaid = None  # type: ignore
+plaid_api = None  # type: ignore
 
-def _get_client() -> plaid_api.PlaidApi:
+
+def _ensure_plaid():
+    global plaid, plaid_api
+    if plaid is None:
+        import plaid as _plaid
+        from plaid.api import plaid_api as _plaid_api
+        plaid = _plaid
+        plaid_api = _plaid_api
+
+
+def _get_client():
     """Create Plaid API client from settings."""
+    _ensure_plaid()
     config = plaid.Configuration(
         host=_get_plaid_host(),
         api_key={
@@ -37,6 +39,7 @@ def _get_client() -> plaid_api.PlaidApi:
 
 
 def _get_plaid_host():
+    _ensure_plaid()
     env = settings.plaid_env.lower()
     if env == "production":
         return plaid.Environment.Production
@@ -52,6 +55,11 @@ def is_configured() -> bool:
 
 def create_link_token(user_id: str = "sentinel-user") -> dict:
     """Create a Plaid Link token for the frontend."""
+    from plaid.model.link_token_create_request import LinkTokenCreateRequest
+    from plaid.model.link_token_create_request_user import LinkTokenCreateRequestUser
+    from plaid.model.products import Products
+    from plaid.model.country_code import CountryCode
+
     client = _get_client()
 
     products = [Products("transactions")]
@@ -73,6 +81,9 @@ def create_link_token(user_id: str = "sentinel-user") -> dict:
 
 def exchange_public_token(public_token: str, institution_name: str = "") -> dict:
     """Exchange a public token from Plaid Link for an access token and create accounts."""
+    from plaid.model.item_public_token_exchange_request import ItemPublicTokenExchangeRequest
+    from plaid.model.accounts_balance_get_request import AccountsBalanceGetRequest
+
     client = _get_client()
 
     exchange_request = ItemPublicTokenExchangeRequest(public_token=public_token)
@@ -160,6 +171,8 @@ def sync_transactions(item_id: Optional[str] = None) -> dict:
     Sync transactions using Plaid's transaction sync endpoint.
     Uses cursor-based pagination for incremental updates.
     """
+    from plaid.model.transactions_sync_request import TransactionsSyncRequest
+
     client = _get_client()
     total_added = 0
     total_modified = 0
@@ -226,6 +239,8 @@ def sync_transactions(item_id: Optional[str] = None) -> dict:
 
 def sync_holdings(item_id: Optional[str] = None) -> dict:
     """Sync investment holdings from Plaid."""
+    from plaid.model.investments_holdings_get_request import InvestmentsHoldingsGetRequest
+
     client = _get_client()
     total_holdings = 0
     total_securities = 0
@@ -316,6 +331,8 @@ def sync_holdings(item_id: Optional[str] = None) -> dict:
 
 def sync_balances(item_id: Optional[str] = None) -> dict:
     """Refresh account balances."""
+    from plaid.model.accounts_balance_get_request import AccountsBalanceGetRequest
+
     client = _get_client()
     updated = 0
 

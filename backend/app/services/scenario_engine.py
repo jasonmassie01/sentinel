@@ -136,7 +136,7 @@ def project_expense_cut(
 
     # Investment opportunity cost (compound growth)
     rate = portfolio_return_rate
-    invested_1yr = annual
+    invested_1yr = annual * (1 + rate)
     invested_5yr = sum(annual * (1 + rate) ** i for i in range(5))
     invested_10yr = sum(annual * (1 + rate) ** i for i in range(10))
 

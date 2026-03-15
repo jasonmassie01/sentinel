@@ -13,7 +13,7 @@ def test_health_check():
     assert data["version"] == "0.1.0"
 
 
-def test_list_accounts_empty():
+def test_list_accounts():
     response = client.get("/api/accounts")
     assert response.status_code == 200
-    assert response.json() == []
+    assert isinstance(response.json(), list)

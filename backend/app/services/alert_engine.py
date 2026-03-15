@@ -70,14 +70,16 @@ def get_all_alerts(prices: Optional[dict[str, float]] = None) -> list[Alert]:
         subs = subscription_detector.get_subscriptions()
         for s in subs:
             if s.get("status") == "price_increased":
+                amount = s.get("amount") or 0
+                annual = s.get("annual_cost") or 0
                 alerts.append(Alert(
                     id=f"sub_increase_{s['merchant']}",
                     type="subscription_increase",
                     severity="info",
                     title=f"{s['merchant']}: price increased",
-                    message=f"Subscription now ${s['amount']:.2f}/{s['frequency']}. Annual cost: ${s.get('annual_cost', 0):.2f}.",
+                    message=f"Subscription now ${amount:.2f}/{s['frequency']}. Annual cost: ${annual:.2f}.",
                     source_module="email_intelligence",
-                    amount=s.get("annual_cost"),
+                    amount=annual,
                 ))
     except Exception:
         pass
@@ -133,15 +135,18 @@ def get_all_alerts(prices: Optional[dict[str, float]] = None) -> list[Alert]:
             ).fetchall()
 
         for w in wishlist_alerts:
+            cur = w["current_price"] or 0
+            target = w["target_price"] or 0
+            lowest = w["lowest_price_ever"] or 0
             alerts.append(Alert(
                 id=f"wishlist_{w['id']}",
                 type="price_drop",
                 severity="info",
                 title=f"Wishlist: {w['item_description'][:50]} hit target price",
-                message=f"Now ${w['current_price']:.2f} (target: ${w['target_price']:.2f}). "
-                        f"Lowest ever: ${w['lowest_price_ever']:.2f} on {w['lowest_price_date']}.",
+                message=f"Now ${cur:.2f} (target: ${target:.2f}). "
+                        f"Lowest ever: ${lowest:.2f} on {w.get('lowest_price_date', 'N/A')}.",
                 source_module="email_intelligence",
-                amount=w["target_price"] - w["current_price"] if w["current_price"] else None,
+                amount=target - cur if cur else None,
             ))
     except Exception:
         pass

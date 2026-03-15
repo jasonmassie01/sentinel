@@ -81,7 +81,8 @@ def get_auth_url() -> Optional[str]:
         "access_type": "offline",
         "prompt": "consent",
     }
-    query = "&".join(f"{k}={v}" for k, v in params.items())
+    from urllib.parse import urlencode
+    query = urlencode(params)
     return f"https://accounts.google.com/o/oauth2/v2/auth?{query}"
 
 

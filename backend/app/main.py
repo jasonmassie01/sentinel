@@ -1,4 +1,5 @@
 import logging
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from apscheduler.schedulers.background import BackgroundScheduler
@@ -18,32 +19,6 @@ from app.api.plaid import router as plaid_router
 from app.api.coinbase import router as coinbase_router
 
 log = logging.getLogger("sentinel")
-
-app = FastAPI(
-    title=settings.app_name,
-    description="Personal Financial Intelligence System",
-    version="0.1.0",
-)
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost:3000"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-app.include_router(health_router)
-app.include_router(accounts_router, prefix="/api")
-app.include_router(imports_router, prefix="/api")
-app.include_router(btc_router, prefix="/api")
-app.include_router(portfolio_router, prefix="/api")
-app.include_router(tax_router, prefix="/api")
-app.include_router(email_router, prefix="/api")
-app.include_router(scenarios_router, prefix="/api")
-app.include_router(alerts_router, prefix="/api")
-app.include_router(plaid_router, prefix="/api")
-app.include_router(coinbase_router, prefix="/api")
 
 scheduler = BackgroundScheduler()
 
@@ -118,27 +93,25 @@ def _btc_address_sync_job():
         log.error(f"BTC address auto-sync failed: {e}")
 
 
-@app.on_event("startup")
-async def startup():
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup
     init_db()
 
     has_jobs = False
 
-    # Schedule automatic Plaid sync every 4 hours
     from app.services import plaid_service
     if plaid_service.is_configured():
         scheduler.add_job(_plaid_sync_job, "interval", hours=4, id="plaid_sync")
         has_jobs = True
         log.info("Plaid auto-sync scheduled (every 4 hours)")
 
-    # Schedule automatic Coinbase sync every 4 hours
     from app.services import coinbase_service
     if coinbase_service.is_configured():
         scheduler.add_job(_coinbase_sync_job, "interval", hours=4, id="coinbase_sync")
         has_jobs = True
         log.info("Coinbase auto-sync scheduled (every 4 hours)")
 
-    # Schedule on-chain BTC address refresh every 4 hours
     scheduler.add_job(_btc_address_sync_job, "interval", hours=4, id="btc_address_sync")
     has_jobs = True
     log.info("BTC address auto-sync scheduled (every 4 hours)")
@@ -146,8 +119,36 @@ async def startup():
     if has_jobs:
         scheduler.start()
 
+    yield
 
-@app.on_event("shutdown")
-async def shutdown():
+    # Shutdown
     if scheduler.running:
         scheduler.shutdown(wait=False)
+
+
+app = FastAPI(
+    title=settings.app_name,
+    description="Personal Financial Intelligence System",
+    version="0.1.0",
+    lifespan=lifespan,
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173", "http://localhost:3000"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+app.include_router(health_router)
+app.include_router(accounts_router, prefix="/api")
+app.include_router(imports_router, prefix="/api")
+app.include_router(btc_router, prefix="/api")
+app.include_router(portfolio_router, prefix="/api")
+app.include_router(tax_router, prefix="/api")
+app.include_router(email_router, prefix="/api")
+app.include_router(scenarios_router, prefix="/api")
+app.include_router(alerts_router, prefix="/api")
+app.include_router(plaid_router, prefix="/api")
+app.include_router(coinbase_router, prefix="/api")

@@ -316,7 +316,8 @@ def get_bracket_position(
     # Ordinary income = W-2 + net short-term gains
     # (Long-term gains taxed separately at LTCG rates)
     ordinary_income = w2_income + net_st
-    taxable_income = ordinary_income  # simplified; ignoring standard deduction here
+    standard_deduction = 15_700  # 2026 estimate for single
+    taxable_income = max(0, ordinary_income - standard_deduction)
 
     # Find current ordinary income bracket
     current_rate = 0.0
@@ -414,7 +415,8 @@ def model_sale(
 
         remaining_to_sell -= sell_qty
 
-    total_proceeds = quantity * sale_price
+    actually_sold = quantity - remaining_to_sell
+    total_proceeds = actually_sold * sale_price
     total_gain = total_proceeds - total_cost
 
     # Estimate tax
