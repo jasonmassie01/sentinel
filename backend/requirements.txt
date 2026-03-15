@@ -6,3 +6,4 @@ aiosqlite==0.20.0
 apscheduler==3.10.4
 python-multipart==0.0.20
 httpx==0.28.1
+plaid-python==29.0.0

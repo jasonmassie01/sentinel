@@ -41,8 +41,19 @@ CREATE TABLE IF NOT EXISTS accounts (
     type TEXT NOT NULL CHECK(type IN ('brokerage', 'crypto', 'checking', 'credit_card')),
     institution TEXT NOT NULL,
     last_import_date TEXT,
+    plaid_account_id TEXT,
+    plaid_item_id TEXT,
     created_at TEXT DEFAULT (datetime('now')),
     updated_at TEXT DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS plaid_items (
+    item_id TEXT PRIMARY KEY,
+    access_token TEXT NOT NULL,
+    institution_name TEXT,
+    cursor TEXT DEFAULT '',
+    last_synced TEXT,
+    created_at TEXT DEFAULT (datetime('now'))
 );
 
 CREATE TABLE IF NOT EXISTS holdings (
@@ -81,7 +92,8 @@ CREATE TABLE IF NOT EXISTS transactions (
     subcategory TEXT,
     description TEXT,
     tax_relevant INTEGER NOT NULL DEFAULT 0,
-    source TEXT NOT NULL DEFAULT 'manual' CHECK(source IN ('csv_import', 'email_parsed', 'manual', 'auto_fetch')),
+    source TEXT NOT NULL DEFAULT 'manual' CHECK(source IN ('csv_import', 'email_parsed', 'manual', 'auto_fetch', 'plaid')),
+    plaid_transaction_id TEXT,
     created_at TEXT DEFAULT (datetime('now'))
 );
 

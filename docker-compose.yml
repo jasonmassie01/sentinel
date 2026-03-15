@@ -2,13 +2,16 @@ services:
   backend:
     build: ./backend
     ports:
-      - "8000:8000"
+      - "8001:8000"
     volumes:
       - ./backend:/app
       - sentinel-data:/app/data
     environment:
       - SENTINEL_DEBUG=true
       - SENTINEL_DATA_DIR=/app/data
+      - SENTINEL_PLAID_CLIENT_ID=${SENTINEL_PLAID_CLIENT_ID:-}
+      - SENTINEL_PLAID_SECRET=${SENTINEL_PLAID_SECRET:-}
+      - SENTINEL_PLAID_ENV=${SENTINEL_PLAID_ENV:-sandbox}
     restart: unless-stopped
 
   frontend:

@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { api } from '../api/client'
 import type { NetWorth, BTCPrice, HealthStatus } from '../api/types'
 import { formatUSD, formatPct, gainLossClass } from '../components/FormatUtils'
+import { PlaidManager } from '../components/PlaidLink'
 import './Dashboard.css'
 
 export function Dashboard() {
@@ -203,26 +204,10 @@ export function Dashboard() {
           <div className="empty-state">No alerts — all clear</div>
         </div>
 
-        {/* Quick Actions — only show when no accounts */}
-        {!hasAccounts && (
-          <div className="card onboarding-card">
-            <h3 className="card-title">Get Started</h3>
-            <div className="onboarding-steps">
-              <div className="step">
-                <span className="step-number">1</span>
-                <span>Create accounts via API: POST /api/accounts</span>
-              </div>
-              <div className="step">
-                <span className="step-number">2</span>
-                <span>Import CSVs: POST /api/accounts/:id/import</span>
-              </div>
-              <div className="step">
-                <span className="step-number">3</span>
-                <span>Track BTC: POST /api/btc/track-address</span>
-              </div>
-            </div>
-          </div>
-        )}
+        {/* Plaid Account Linking */}
+        <div className="card onboarding-card">
+          <PlaidManager onSync={fetchData} />
+        </div>
       </div>
     </div>
   )

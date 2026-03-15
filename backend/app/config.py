@@ -10,6 +10,11 @@ class Settings(BaseSettings):
     mempool_api: str = "https://mempool.space/api"
     debug: bool = False
 
+    # Plaid
+    plaid_client_id: str = ""
+    plaid_secret: str = ""
+    plaid_env: str = "sandbox"  # sandbox, development, production
+
     model_config = {"env_prefix": "SENTINEL_"}
 
 
